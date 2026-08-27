@@ -45,11 +45,14 @@ main { min-width: 0; padding: 34px clamp(22px, 4vw, 58px) 70px; }
 .eyebrow { display: block; color: var(--tea); font-size: 11px; font-weight: 850; letter-spacing: .15em; }
 h1 { margin: 5px 0 0; font-family: Georgia, "Noto Serif TC", serif; font-size: clamp(29px, 4vw, 42px); font-weight: 500; letter-spacing: -.04em; }
 h2 { margin: 5px 0 0; font-size: 20px; line-height: 1.4; }
-.period-chip, .soft-chip, .status-pill { display: inline-flex; align-items: center; padding: 7px 11px; border-radius: 999px; color: var(--tea-deep); background: var(--tea-light); font-size: 11px; font-weight: 850; white-space: nowrap; }
-.period-chip { padding: 10px 16px; color: #fff; background: var(--tea-deep); font-size: 13px; }
+.soft-chip, .status-pill { display: inline-flex; align-items: center; padding: 7px 11px; border-radius: 999px; color: var(--tea-deep); background: var(--tea-light); font-size: 11px; font-weight: 850; white-space: nowrap; }
+.period-switch { display: flex; padding: 4px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.68); }
+.period-switch button { min-height: 38px; padding: 7px 11px; border: 0; border-radius: 10px; color: var(--soft); background: transparent; font-size: 12px; font-weight: 800; white-space: nowrap; }
+.period-switch button.is-active { color: #fff; background: var(--tea-deep); box-shadow: 0 5px 13px rgba(23,63,52,.18); }
 .demo-banner { margin-bottom: 22px; padding: 14px 16px; display: flex; gap: 12px; border: 1px solid #e8d1ad; border-radius: 15px; background: #fff7e9; }
 .demo-banner > span { font-size: 21px; }
 .demo-banner p { margin: 0; color: #755230; font-size: 12px; line-height: 1.6; }
+.freshness-bar { margin: -8px 0 18px; padding: 10px 13px; border-left: 3px solid var(--tea); border-radius: 0 10px 10px 0; color: var(--soft); background: rgba(255,255,255,.55); font-size: 11px; line-height: 1.55; }
 .view { display: none; }
 .view.is-active { display: block; animation: enter .22s ease; }
 @keyframes enter { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
@@ -72,6 +75,7 @@ h2 { margin: 5px 0 0; font-size: 20px; line-height: 1.4; }
 .chart-legend { margin-top: 5px; display: flex; justify-content: space-between; gap: 12px; color: var(--soft); font-size: 11px; }
 .chart-legend span { display: flex; align-items: center; gap: 7px; }
 .chart-legend i { width: 18px; height: 3px; border-radius: 3px; background: var(--tea); }
+.empty-state { width: 100%; padding: 42px 16px; color: var(--soft); text-align: center; font-size: 12px; }
 .product-chart { display: grid; grid-template-columns: 155px minmax(0, 1fr); align-items: center; gap: 14px; }
 .product-chart svg { width: 100%; height: auto; }
 .product-chart svg circle:not(.donut-base) { fill: none; stroke-width: 20; transform: rotate(-90deg); transform-origin: 80px 80px; }
@@ -185,8 +189,9 @@ dialog::backdrop { background: rgba(19,38,32,.58); backdrop-filter: blur(3px); }
   .nav-item b { font-size: 11px; }
   .nav-item.is-active { color: var(--tea-deep); background: #fffdf8; }
   main { padding: 17px 14px 72px; }
-  .topbar { align-items: flex-start; }
-  .period-chip { padding: 9px 12px; }
+  .topbar { align-items: stretch; flex-direction: column; }
+  .period-switch { width: 100%; }
+  .period-switch button { min-height: 44px; flex: 1; padding-inline: 4px; }
   .demo-banner { padding: 12px; }
   .kpi-grid { gap: 10px; }
   .kpi-card { min-height: 124px; padding: 16px; }
