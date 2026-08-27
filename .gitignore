@@ -1,0 +1,8 @@
+.DS_Store
+Thumbs.db
+*.sqlite
+*.db
+*.env
+*token*
+*.xlsx
+*.csv

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#173f34">
+  <meta name="description" content="茶路陳惠玲・訓導山茶農營運儀表板公開展示版">
+  <title>陳惠玲｜訓導山營運儀表板</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand-lockup">
+        <div class="brand-mark" aria-hidden="true">茶</div>
+        <div><strong>茶路</strong><span>茶農營運台</span></div>
+      </div>
+      <div class="farmer-card">
+        <span>公開展示版</span>
+        <strong>陳惠玲</strong>
+        <small>訓導山</small>
+      </div>
+      <nav aria-label="主要功能">
+        <button class="nav-item is-active" data-view="overview"><span aria-hidden="true">🏠</span><b>首頁</b></button>
+        <button class="nav-item" data-view="orders"><span aria-hidden="true">📦</span><b>訂單</b></button>
+        <button class="nav-item" data-view="ads"><span aria-hidden="true">📣</span><b>廣告</b></button>
+        <button class="nav-item" data-view="advice"><span aria-hidden="true">💡</span><b>建議</b></button>
+      </nav>
+      <div class="privacy-note"><strong>安心試看</strong><span>這個版本沒有真實顧客個資，也不能修改正式訂單。</span></div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div><p class="eyebrow">陳惠玲・訓導山</p><h1 id="view-title">營運儀表板</h1></div>
+        <span class="period-chip">近一年</span>
+      </header>
+
+      <div class="demo-banner"><span aria-hidden="true">👀</span><p><strong>這是給茶農確認功能的展示版</strong><br>營業額採真實彙總；訂單個資是虛構範例。請把想修改的地方截圖傳給茶路掌門。</p></div>
+
+      <section class="view is-active" id="overview-view">
+        <div class="kpi-grid" id="overview-kpis"></div>
+        <div class="dashboard-grid">
+          <article class="panel chart-panel">
+            <div class="panel-heading"><div><span class="eyebrow">營業額趨勢</span><h2>每個月賣了多少</h2></div><span class="soft-chip">2025/08–2026/07</span></div>
+            <div id="revenue-chart" class="chart-wrap"></div>
+          </article>
+          <article class="panel product-panel">
+            <div class="panel-heading"><div><span class="eyebrow">商品銷售</span><h2>客人都買哪些茶</h2></div></div>
+            <div id="product-chart" class="product-chart"></div>
+          </article>
+          <article class="panel focus-panel">
+            <div class="focus-icon" aria-hidden="true">🌱</div>
+            <div><span class="eyebrow">現在最值得做</span><h2>把春茶預購變成固定的品牌節奏</h2><p>今年 5 月創下近一年最高營業額 NT$91,145；下一季可提早 3 週開始暖身，依序說明產地、採收進度與開賣日期。</p></div>
+            <button class="secondary-button" data-go-view="advice">看完整做法</button>
+          </article>
+        </div>
+      </section>
+
+      <section class="view" id="orders-view">
+        <div class="section-intro"><span class="eyebrow">訂單管理</span><h2>準備出貨的訂單</h2><p>以下資料只用來展示操作方式，姓名、電話、地址與訂單編號全是虛構內容。</p></div>
+        <div class="order-summary"><span>示範訂單</span><strong id="pending-count">3 筆待處理</strong></div>
+        <div id="order-list" class="order-list"></div>
+      </section>
+
+      <section class="view" id="ads-view">
+        <div class="section-intro"><span class="eyebrow">Facebook 廣告</span><h2>廣告表現</h2><p>茶路負責投放；調高預算或增加廣告時，請直接和茶路掌門聯絡。</p></div>
+        <div class="success-card"><span aria-hidden="true">✓</span><div><strong>Meta API 已成功同步</strong><p>廣告與訂單期間都對齊 2025/08–2026/07。廣告費是美元、營業額是新台幣，匯率處理完成前不混算 ROAS。</p></div></div>
+        <div class="kpi-grid ad-kpis" id="ad-kpis"></div>
+        <article class="panel ad-visual">
+          <div class="panel-heading"><div><span class="eyebrow">廣告轉換流程</span><h2>看到廣告後，客人做到哪一步</h2></div><span class="status-pill"><i></i>進行中</span></div>
+          <div id="ad-funnel" class="ad-funnel"></div>
+        </article>
+        <article class="panel ad-trend-panel">
+          <div class="panel-heading"><div><span class="eyebrow">每月廣告趨勢</span><h2>每月花費與 Meta 購買</h2><p>綠色是美元花費，橘線是 Meta 歸因購買次數。</p></div><span class="soft-chip">近一年</span></div>
+          <div id="ad-trend-chart" class="chart-wrap"></div>
+        </article>
+      </section>
+
+      <section class="view" id="advice-view">
+        <div class="section-intro"><span class="eyebrow">改善建議</span><h2>接下來可以怎麼做</h2><p>每張建議都寫明「為什麼、怎麼做、做到什麼程度」，接受後再與茶路掌門討論執行。</p></div>
+        <div id="recommendation-list" class="recommendation-list"></div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="order-dialog">
+    <div class="dialog-head"><div><span class="eyebrow">示範訂單</span><h2 id="dialog-title">訂單內容</h2></div><button id="dialog-close" aria-label="關閉">×</button></div>
+    <div id="order-detail"></div>
+  </dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
