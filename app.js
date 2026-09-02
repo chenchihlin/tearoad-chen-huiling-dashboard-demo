@@ -82,6 +82,7 @@ function renderPeriod() {
   renderProductChart(period);
   renderFocus(period);
   renderAds(period);
+  renderDecisionReadiness();
   renderRecommendations();
 }
 
@@ -254,21 +255,108 @@ function openOrder(orderId) {
   $("#order-dialog").showModal();
 }
 
+function percentage(numerator, denominator) {
+  return Number(denominator || 0) ? Number(numerator || 0) / Number(denominator) * 100 : null;
+}
+
+function formatRate(value) {
+  return value == null ? "無法計算" : `${value.toFixed(1)}%`;
+}
+
+function renderDecisionReadiness() {
+  const period = activePeriod();
+  const ads = period.ads.totals;
+  const items = [
+    {
+      status: "pass", label: "1Shop 訂單營業額", verdict: "可作為實際成交依據",
+      note: `${period.label}有 ${period.orders.order_count} 筆有效訂單；取消單已分開計算。`
+    },
+    {
+      status: "directional", label: "Meta 投放與漏斗", verdict: "可用來找投放問題",
+      note: `${period.label}有 ${Number(ads.impressions || 0).toLocaleString("zh-TW")} 次曝光、${Number(ads.purchases || 0).toLocaleString("zh-TW")} 次平台歸因購買。`
+    },
+    {
+      status: "unknown", label: "真實回本與擴量", verdict: "目前不能判斷",
+      note: "尚未對上同一筆訂單、逐日匯率、茶農成本與可承受獲客成本。"
+    }
+  ];
+  $("#decision-readiness").innerHTML = `<div class="readiness-heading"><span class="eyebrow">先看資料能不能用</span><h3>這些數字現在能做什麼</h3><p>綠色可直接採用；黃色只能看方向；灰色代表還要補資料。</p></div><div class="readiness-list">${items.map((item) => `<div class="readiness-row"><span class="readiness-dot ${item.status}" aria-hidden="true"></span><div><strong>${escapeHTML(item.label)}</strong><p>${escapeHTML(item.note)}</p></div><b class="readiness-verdict ${item.status}">${escapeHTML(item.verdict)}</b></div>`).join("")}</div>`;
+}
+
 function periodRecommendation() {
   const period = activePeriod();
   const ads = period.ads.totals;
   const purchases = Number(ads.purchases || 0);
   const cost = ads.cost_per_purchase_usd;
+  const common = {
+    id: `period-${state.period}`, icon: "📣", category: "廣告診斷",
+    target: `Meta 活動「${snapshot.campaign.name}」・${period.label}`,
+    owner: "茶路掌門", qualityStatus: "directional", quality: "方向性",
+    review: "完整觀察 7 天後"
+  };
   if (!ads.spend_usd) {
-    return { id: `period-${state.period}`, icon: "📣", category: `${period.label}廣告`, priority: "先確認", title: `${period.label}沒有廣告花費`, evidence: `${period.label} Meta 花費為 US$0.00，也沒有歸因購買。`, reason: "需要先確認活動是否有排程、額度或投放狀態，不能從空白資料判斷素材好壞。", steps: ["請茶路確認活動狀態", "確認付款與預算設定", "有完整 7 天資料後再評估"], success: "連續 7 天都有花費、點擊與購買資料。" };
+    return {
+      ...common, priority: "先查原因", confidence: "低", qualityStatus: "unknown", quality: "資料不足",
+      title: `${period.label}沒有廣告花費，先確認投放是否正常`,
+      evidence: `${period.label} Meta 花費為 US$0.00，也沒有歸因購買。`,
+      reason: "空白資料只能證明這段期間沒有記錄到投放，不能直接判斷素材或商品不好。",
+      alternative: "活動可能尚未排程、被關閉、預算未送出，也可能是同步來源中斷。",
+      steps: ["請茶路確認活動狀態與排程", "確認付款、預算與帳號是否受限", "同步恢復後累積一個完整觀察期"],
+      guardrail: "資料恢復前不新增預算、不停用其他活動，也不把零值當成成效失敗。",
+      success: "連續 7 天都能取得花費、曝光、點擊與轉換資料。"
+    };
   }
-  if (purchases < 5) {
-    return { id: `period-${state.period}`, icon: "📣", category: `${period.label}廣告`, priority: "持續觀察", title: "先累積足夠購買，再決定是否加預算", evidence: `${period.label}花費 ${money(ads.spend_usd, "USD")}，Meta 歸因購買 ${purchases} 次，每次購買 ${cost == null ? "尚無法計算" : money(cost, "USD")}。`, reason: "購買次數仍少，單日波動容易讓判斷失真。現在適合觀察，不適合只憑一天就放大或停掉。", steps: ["維持目前投放到滿 7 天", "由茶路檢查是否集中在同一素材", "滿 7 天後比較點擊率與每次購買成本"], success: "至少累積 5 次 Meta 購買，再和茶路掌門討論預算。" };
+  if (!purchases) {
+    return {
+      ...common, priority: "先查追蹤", confidence: "低", qualityStatus: "unknown", quality: "購買事件待確認",
+      title: "有花費但沒有 Meta 購買，先排除追蹤問題",
+      evidence: `${period.label}花費 ${money(ads.spend_usd, "USD")}、${Number(ads.link_clicks || 0).toLocaleString("zh-TW")} 次連結點擊，但 Meta 購買為 0。`,
+      reason: "問題可能出在廣告、銷售頁或 Purchase 事件；先把資料量對，才有資格討論預算。",
+      alternative: "也可能只是觀察期太短、購買延遲，或點擊者尚未完成訂單。",
+      steps: ["用一筆測試流程確認到站、加購、結帳與購買事件", "比對同日期的 1Shop 有效訂單", "追蹤正常後再拆看素材與頁面"],
+      guardrail: "追蹤未確認前不自動加預算，也不因 Meta 顯示 0 就直接停掉全部廣告。",
+      success: "完成端到端事件測試，並能解釋 Meta 與 1Shop 的差異。",
+      review: "追蹤檢查完成後 24 小時"
+    };
   }
-  if (cost != null && cost >= 18) {
-    return { id: `period-${state.period}`, icon: "📣", category: `${period.label}廣告`, priority: "聯絡茶路", title: "先改善廣告素材，再討論增加預算", evidence: `${period.label}花費 ${money(ads.spend_usd, "USD")}，帶來 ${purchases} 次 Meta 購買，每次購買 ${money(cost, "USD")}。`, reason: "目前每次購買成本偏高，直接提高預算可能把效率問題一起放大。", steps: ["請茶路拆看目前各素材表現", "以陳惠玲本人、訓導山環境、春冬茶差異各做一個新角度", "新舊素材同時觀察 7 天"], success: "新素材累積至少 5 次購買，且每次購買成本低於目前期間數字。" };
-  }
-  return { id: `period-${state.period}`, icon: "📣", category: `${period.label}廣告`, priority: "維持觀察", title: "目前廣告效率可維持，先找出有效素材", evidence: `${period.label}花費 ${money(ads.spend_usd, "USD")}，帶來 ${purchases} 次 Meta 購買，每次購買 ${money(cost, "USD")}。`, reason: "數字尚可時，先理解是哪一個素材與說法有效，比直接擴大所有廣告更有價值。", steps: ["請茶路標記購買最多的素材", "把有效素材拆成產地、人物、商品三種說法", "保持相近預算再觀察 7 天"], success: "找出至少一個能穩定帶來購買的素材角度，再討論增加預算。" };
+  const confidence = purchases < 5 ? "低" : "中";
+  return {
+    ...common, priority: purchases < 5 ? "先累積資料" : "先訂成本界線", confidence,
+    title: purchases < 5 ? "先累積完整觀察期，再討論加預算" : "廣告有帶來購買，但現在還不能說賺不賺",
+    evidence: `${period.label}花費 ${money(ads.spend_usd, "USD")}、Meta 歸因購買 ${purchases} 次，每次購買 ${cost == null ? "尚無法計算" : money(cost, "USD")}；1Shop 同期有 ${period.orders.order_count} 筆有效訂單。`,
+    reason: "Meta 購買與 1Shop 訂單不是同一套口徑，而且目前沒有茶農成本與可承受 CPA，所以不能把每次購買成本直接判定為好或壞。",
+    alternative: "兩邊差異可能來自瀏覽歸因、回看期間、跨裝置、重複事件或訂單時間不同。",
+    steps: ["茶路先比對每日 Meta 購買與 1Shop 訂單走勢", "記錄目前預算、素材與每次購買成本作為基準", "茶農可提供一筆訂單可接受的廣告成本範圍，再討論擴量"],
+    guardrail: "目前不直接提高預算、不把平台購買當成實際訂單，也不以營業額代替獲利。",
+    success: "完成至少一個完整 7 天觀察期，並設定可承受的每次購買成本後，再與掌門決定是否調整預算。"
+  };
+}
+
+function creativeTestRecommendation() {
+  const period = activePeriod();
+  const ads = period.ads.totals;
+  const topProduct = cleanProductName(period.top_products[0]?.product_name || "主要商品");
+  const landingRate = percentage(ads.landing_page_views, ads.link_clicks);
+  const cartRate = percentage(ads.add_to_carts, ads.landing_page_views);
+  const hasLearningSample = Number(ads.link_clicks || 0) >= 100 && Number(ads.purchases || 0) >= 5;
+  return {
+    id: `creative-${state.period}`, icon: "🧪", category: "素材測試", priority: "準備下一輪",
+    confidence: hasLearningSample ? "中" : "低", quality: "需補單則素材資料", qualityStatus: "unknown",
+    target: `${topProduct}・Meta 活動「${snapshot.campaign.name}」`,
+    title: `用兩個真正不同的角度測「${topProduct}」`,
+    evidence: `${period.label}有 ${Number(ads.link_clicks || 0).toLocaleString("zh-TW")} 次連結點擊、${Number(ads.landing_page_views || 0).toLocaleString("zh-TW")} 次到站、${Number(ads.add_to_carts || 0).toLocaleString("zh-TW")} 次加購；點擊到到站 ${formatRate(landingRate)}、到站到加購 ${formatRate(cartRate)}。目前只有活動總計，還不知道是哪一則素材帶來結果。`,
+    reason: "下一輪應該先測不同的購買理由，而不是只換顏色或同義字。這張卡是探索提案，不是假裝已經找到贏家。",
+    alternative: "點擊後流失也可能來自頁面速度、商品說明、價格、結帳或連結不一致，不一定全是素材。",
+    steps: [
+      "A｜人物與選擇：由陳惠玲回答『做這款茶時最在意哪一個選擇？』，只使用本人確認的事實",
+      "B｜第一次怎麼選：用春茶與冬茶的已確認差異，幫第一次購買的人判斷適合哪一款",
+      "固定同一受眾、預算、優惠與銷售頁，只更換主要角度與第一句鉤子",
+      "命名保留角度、鉤子、格式與版本，讓成效可以回推到真正的差異"
+    ],
+    guardrail: "不製造假心得、假稀缺、療效或未確認風味；測試期間不一起更換受眾、預算、優惠與頁面。",
+    success: "兩個版本各跑滿 7 天並取得可比較的到站量；同時看加購率與每次購買成本。樣本不足就標記『還不能判斷』，不提前宣布贏家。",
+    owner: "陳惠玲確認事實・茶路製作與投放", review: "兩版都完成 7 天後"
+  };
 }
 
 function recommendationStatus(id) {
@@ -276,11 +364,14 @@ function recommendationStatus(id) {
 }
 
 function renderRecommendations() {
-  const items = [periodRecommendation(), ...demo.recommendations];
-  $("#recommendation-list").innerHTML = items.map((item) => {
+  const renderCard = (item) => {
     const status = recommendationStatus(item.id);
-    return `<article class="recommendation-card"><div class="recommendation-top"><span class="recommendation-icon">${item.icon}</span><div><span>${escapeHTML(item.category)}</span><b>${escapeHTML(item.priority)}</b></div></div><h3>${escapeHTML(item.title)}</h3><div class="evidence"><span>數字根據</span><p>${escapeHTML(item.evidence)}</p></div><p class="reason"><strong>為什麼：</strong>${escapeHTML(item.reason)}</p><div class="steps"><span>照這樣做</span><ol>${item.steps.map((step) => `<li>${escapeHTML(step)}</li>`).join("")}</ol></div><div class="success"><span>完成標準</span><p>${escapeHTML(item.success)}</p></div><div class="recommendation-actions">${status === "new" ? `<button class="accept-button" data-decision="accepted" data-id="${item.id}">接受，聯絡掌門</button><button class="skip-button" data-decision="skipped" data-id="${item.id}">先略過</button>` : `<strong>${status === "accepted" ? "✓ 已接受，請聯絡茶路掌門" : "已略過，可隨時重新評估"}</strong><button class="reset-button" data-decision="new" data-id="${item.id}">復原</button>`}</div></article>`;
-  }).join("");
+    const qualityStatus = ["pass", "directional", "unknown"].includes(item.qualityStatus) ? item.qualityStatus : "unknown";
+    const confidenceClass = item.confidence === "高" ? "high" : item.confidence === "中" ? "medium" : "low";
+    return `<article class="recommendation-card ${qualityStatus}"><div class="recommendation-top"><span class="recommendation-icon" aria-hidden="true">${item.icon}</span><div class="recommendation-chips"><span>${escapeHTML(item.category)}</span><b>${escapeHTML(item.priority)}</b><em class="confidence ${confidenceClass}">${escapeHTML(item.confidence || "低")}信心</em></div></div><h3>${escapeHTML(item.title)}</h3><div class="recommendation-target"><span>判斷對象</span><strong>${escapeHTML(item.target || "目前選擇的資料期間")}</strong></div><div class="evidence"><div><span>資料根據</span><b class="quality-chip ${qualityStatus}">${escapeHTML(item.quality || "待確認")}</b></div><p>${escapeHTML(item.evidence)}</p></div><p class="reason"><strong>目前判斷：</strong>${escapeHTML(item.reason)}</p>${item.alternative ? `<p class="alternative"><strong>也可能是：</strong>${escapeHTML(item.alternative)}</p>` : ""}<div class="steps"><span>建議做法</span><ol>${item.steps.map((step) => `<li>${escapeHTML(step)}</li>`).join("")}</ol></div>${item.guardrail ? `<div class="guardrail"><span>先不要做</span><p>${escapeHTML(item.guardrail)}</p></div>` : ""}<div class="success"><span>完成與停止條件</span><p>${escapeHTML(item.success)}</p></div><div class="recommendation-meta"><span><b>負責：</b>${escapeHTML(item.owner || "茶路掌門")}</span><span><b>再檢查：</b>${escapeHTML(item.review || "7 天後")}</span></div><div class="recommendation-actions">${status === "new" ? `<button class="accept-button" data-decision="accepted" data-id="${item.id}">接受，聯絡掌門</button><button class="skip-button" data-decision="skipped" data-id="${item.id}">先略過</button>` : `<strong>${status === "accepted" ? "✓ 已接受，請聯絡茶路掌門" : "已略過，可隨時重新評估"}</strong><button class="reset-button" data-decision="new" data-id="${item.id}">復原</button>`}</div></article>`;
+  };
+  const immediate = [periodRecommendation(), creativeTestRecommendation()];
+  $("#recommendation-list").innerHTML = `<div class="recommendation-group-heading"><span class="eyebrow">這期先做</span><h3>先處理會影響廣告決定的兩件事</h3><p>依你上方選擇的期間更新。</p></div>${immediate.map(renderCard).join("")}<div class="recommendation-group-heading long-term"><span class="eyebrow">品牌長期做</span><h3>把旺季成果變成可重複的方法</h3><p>以近一年訂單為主要依據，不會跟著短期波動改變。</p></div>${demo.recommendations.map(renderCard).join("")}`;
 }
 
 document.addEventListener("click", (event) => {
